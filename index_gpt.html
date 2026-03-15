@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>大运干饭地图 - 深圳大运大学城专属美食指南</title>
+
+    <!-- 高德地图安全配置 -->
+    <script>
+        window._AMapSecurityConfig = {
+            securityJsCode: "2d9409f50cc7da932d6a060e6c29afe3" // 替换为你的安全码
+        };
+    </script>
+
+    <style>
+        :root {
+            --primary: #EEAE2A;
+            --primary-dark: #DCA01E;
+            --primary-light: #FFF3CD;
+            --text-main: #1F2937;
+            --text-secondary: #4B5563;
+            --bg-white: #FFFFFF;
+            --bg-gray: #F9FAFB;
+            --border: #E5E7EB;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, "Microsoft YaHei", sans-serif;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            color: var(--text-main);
+        }
+
+        /* 核心布局 */
+        .container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 顶部导航 */
+        .header {
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            color: white;
+            box-shadow: var(--shadow);
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .decision-btn {
+            padding: 8px 20px;
+            background: white;
+            color: var(--primary);
+            border: none;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .decision-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 主体内容 */
+        .main {
+            display: flex;
+            flex: 1;
+            height: calc(100% - 60px);
+        }
+
+        /* 地图区域 */
+        .map-wrap {
+            width: 70%;
+            height: 100%;
+            position: relative;
+        }
+
+        #map-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 右侧面板：筛选+列表 */
+        .panel {
+            width: 30%;
+            height: 100%;
+            background: var(--bg-gray);
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        /* 筛选标签区 */
+        .filter-wrap {
+            background: var(--bg-white);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: var(--shadow);
+        }
+
+        .filter-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .tag-group {
+            margin-bottom: 12px;
+        }
+
+        .tag-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag {
+            padding: 4px 12px;
+            background: var(--bg-gray);
+            border-radius: 15px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tag.active {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            font-weight: 500;
+        }
+
+        /* 餐厅列表 */
+        .restaurant-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .restaurant-item {
+            background: var(--bg-white);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .restaurant-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+        }
+
+        .restaurant-item.active {
+            border-left: 4px solid var(--primary);
+        }
+
+        .restaurant-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .restaurant-info {
+            display: flex;
+            gap: 15px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .restaurant-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .restaurant-tag {
+            padding: 2px 8px;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            border-radius: 10px;
+            font-size: 12px;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .route-btn, .jump-btn {
+            flex: 1;
+            padding: 6px 0;
+            border: none;
+            border-radius: 5px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .route-btn {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+        }
+
+        .jump-btn {
+            background: #e8f4f8;
+            color: #2563eb;
+        }
+
+        /* AI决策弹窗 */
+        .decision-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            width: 90%;
+            max-width: 600px;
+            background: var(--bg-white);
+            border-radius: 15px;
+            padding: 25px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+            color: var(--primary-dark);
+        }
+
+        .option-group {
+            margin-bottom: 20px;
+        }
+
+        .option-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .option-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .option-item {
+            padding: 8px 15px;
+            background: var(--bg-gray);
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .option-item.selected {
+            background: var(--primary);
+            color: white;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px 0;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .close-btn {
+            width: 100%;
+            padding: 10px 0;
+            background: var(--bg-gray);
+            border: none;
+            border-radius: 25px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .result-wrap {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--primary-dark);
+        }
+
+        .result-item {
+            background: var(--primary-light);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .main {
+                flex-direction: column;
+            }
+            .map-wrap {
+                width: 100%;
+                height: 50%;
+            }
+            .panel {
+                width: 100%;
+                height: 50%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部导航 -->
+        <div class="header">
+            <div class="logo">大运干饭地图</div>
+            <button class="decision-btn" id="openDecisionBtn">30秒AI干饭决策</button>
+        </div>
+
+        <!-- 主体内容 -->
+        <div class="main">
+            <!-- 地图区域 -->
+            <div class="map-wrap">
+                <div id="map-container"></div>
+            </div>
+
+            <!-- 右侧面板 -->
+            <div class="panel">
+                <!-- 筛选标签 -->
+                <div class="filter-wrap">
+                    <div class="filter-title">快速筛选</div>
+                    
+                    <div class="tag-group">
+                        <label class="tag-label">口味</label>
+                        <div class="tag-list" id="tasteTags">
+                            <div class="tag" data-key="taste" data-value="辣">辣</div>
+                            <div class="tag" data-key="taste" data-value="不辣">不辣</div>
+                            <div class="tag" data-key="taste" data-value="咸鲜">咸鲜</div>
+                            <div class="tag" data-key="taste" data-value="酸甜">酸甜</div>
+                            <div class="tag" data-key="taste" data-value="清淡">清淡</div>
+                        </div>
+                    </div>
+
+                    <div class="tag-group">
+                        <label class="tag-label">场景</label>
+                        <div class="tag-list" id="sceneTags">
+                            <div class="tag" data-key="scene" data-value="食堂替代">食堂替代</div>
+                            <div class="tag" data-key="scene" data-value="早八速食">早八速食</div>
+                            <div class="tag" data-key="scene" data-value="期末通宵">期末通宵</div>
+                            <div class="tag" data-key="scene" data-value="聚餐">聚餐</div>
+                            <div class="tag" data-key="scene" data-value="一人食">一人食</div>
+                        </div>
+                    </div>
+
+                    <div class="tag-group">
+                        <label class="tag-label">用餐方式</label>
+                        <div class="tag-list" id="wayTags">
+                            <div class="tag" data-key="way" data-value="到店吃">到店吃</div>
+                            <div class="tag" data-key="way" data-value="可外卖">可外卖</div>
+                            <div class="tag" data-key="way" data-value="边走边吃">边走边吃</div>
+                        </div>
+                    </div>
+
+                    <div class="tag-group">
+                        <label class="tag-label">特色</label>
+                        <div class="tag-list" id="featureTags">
+                            <div class="tag" data-key="feature" data-value="小而美">小而美</div>
+                            <div class="tag" data-key="feature" data-value="大众款">大众款</div>
+                            <div class="tag" data-key="feature" data-value="健康轻食">健康轻食</div>
+                            <div class="tag" data-key="feature" data-value="性价比高">性价比高</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 餐厅列表 -->
+                <div class="restaurant-list" id="restaurantList">
+                    <!-- 餐厅项由JS动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI决策弹窗 -->
+    <div class="decision-modal" id="decisionModal">
+        <div class="modal-content">
+            <div class="modal-title">🎯 30秒干饭决策器</div>
+            
+            <div class="option-group">
+                <div class="option-title">1. 想吃什么口味？</div>
+                <div class="option-list" id="tasteOptions">
+                    <div class="option-item" data-type="taste" data-value="辣">辣</div>
+                    <div class="option-item" data-type="taste" data-value="不辣">不辣</div>
+                    <div class="option-item" data-type="taste" data-value="咸鲜">咸鲜</div>
+                    <div class="option-item" data-type="taste" data-value="酸甜">酸甜</div>
+                    <div class="option-item" data-type="taste" data-value="清淡">清淡</div>
+                </div>
+            </div>
+
+            <div class="option-group">
+                <div class="option-title">2. 用餐场景？</div>
+                <div class="option-list" id="sceneOptions">
+                    <div class="option-item" data-type="scene" data-value="食堂替代">食堂吃腻了（找替代）</div>
+                    <div class="option-item" data-type="scene" data-value="早八速食">早八赶时间（速食）</div>
+                    <div class="option-item" data-type="scene" data-value="期末通宵">期末通宵（续命）</div>
+                    <div class="option-item" data-type="scene" data-value="聚餐">和朋友聚餐</div>
+                    <div class="option-item" data-type="scene" data-value="一人食">一个人随便吃</div>
+                </div>
+            </div>
+
+            <div class="option-group">
+                <div class="option-title">3. 用餐方式？</div>
+                <div class="option-list" id="wayOptions">
+                    <div class="option-item" data-type="way" data-value="到店吃">想走着去（到店吃）</div>
+                    <div class="option-item" data-type="way" data-value="可外卖">懒得动（点外卖）</div>
+                    <div class="option-item" data-type="way" data-value="边走边吃">赶时间（边走边吃）</div>
+                </div>
+            </div>
+
+            <div class="option-group">
+                <div class="option-title">4. 想吃什么类型？</div>
+                <div class="option-list" id="featureOptions">
+                    <div class="option-item" data-type="feature" data-value="小而美">小众特色（小而美）</div>
+                    <div class="option-item" data-type="feature" data-value="大众款">大众口味（不踩雷）</div>
+                    <div class="option-item" data-type="feature" data-value="健康轻食">健康轻食（不长胖）</div>
+                    <div class="option-item" data-type="feature" data-value="性价比高">性价比高（省钱）</div>
+                </div>
+            </div>
+
+            <button class="submit-btn" id="submitDecision">生成我的干饭推荐</button>
+
+            <!-- 推荐结果 -->
+            <div class="result-wrap" id="resultWrap">
+                <div class="result-title">✅ 为你推荐的干饭选择</div>
+                <div id="resultList"></div>
+            </div>
+
+            <button class="close-btn" id="closeModal">关闭</button>
+        </div>
+    </div>
+
+    <!-- 高德地图API -->
+    <script src="https://webapi.amap.com/maps?v=2.0&key=ec4b58fd70cb41dc49037198d1d569bd&plugin=AMap.PlaceSearch,AMap.Walking,AMap.Riding,AMap.Transfer"></script>
+    
+    <script>
+        // ===================== 核心配置 =====================
+        // 大运大学城中心点
+        const CENTER_POSITION = [114.2195, 22.6982];
+        // 采集半径（米）
+        const SEARCH_RADIUS = 3000;
+        // 全局变量
+        let map = null;
+        let placeSearch = null;
+        let walkingRoute = null;
+        let ridingRoute = null;
+        let transferRoute = null;
+        let allRestaurants = []; // 所有采集的餐厅数据
+        let selectedFilters = {}; // 选中的筛选条件
+        let selectedDecision = {}; // AI决策选中的条件
+
+        // ===================== 初始化 =====================
+        window.onload = function() {
+            initMap();
+            initEventListeners();
+            // 初始化完成后自动采集美食数据
+            collectFoodData();
+        };
+
+        // 初始化地图
+        function initMap() {
+            // 创建地图实例
+            map = new AMap.Map('map-container', {
+                center: CENTER_POSITION,
+                zoom: 15,
+                zooms: [14, 18], // 限定缩放范围
+                mapStyle: 'amap://styles/whiteshell' // 清新风格
+            });
+
+            // 初始化POI搜索
+            placeSearch = new AMap.PlaceSearch({
+                type: '餐饮服务', // 只搜美食相关
+                radius: SEARCH_RADIUS, // 限定采集范围
+                pageSize: 50, // 每页最多50条
+                pageIndex: 1,
+                extensions: 'all' // 返回详细信息
+            });
+
+            // 初始化路线规划
+            walkingRoute = new AMap.Walking({ map: map });
+            ridingRoute = new AMap.Riding({ map: map });
+            transferRoute = new AMap.Transfer({ map: map });
+
+            // 添加中心点标记
+            new AMap.Marker({
+                position: CENTER_POSITION,
+                map: map,
+                title: '大运大学城'
+            });
+
+            // 绘制采集范围圆
+            new AMap.Circle({
+                center: CENTER_POSITION,
+                radius: SEARCH_RADIUS,
+                strokeColor: '#EEAE2A',
+                strokeWeight: 2,
+                strokeStyle: 'dashed',
+                fillColor: '#EEAE2A',
+                fillOpacity: 0.05,
+                map: map
+            });
+        }
+
+        // 初始化事件监听
+        function initEventListeners() {
+            // 打开AI决策弹窗
+            document.getElementById('openDecisionBtn').addEventListener('click', function() {
+                document.getElementById('decisionModal').style.display = 'flex';
+            });
+
+            // 关闭弹窗
+            document.getElementById('closeModal').addEventListener('click', function() {
+                document.getElementById('decisionModal').style.display = 'none';
+                // 重置选择
+                document.querySelectorAll('.option-item.selected').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                document.getElementById('resultWrap').style.display = 'none';
+                selectedDecision = {};
+            });
+
+            // AI决策选项选择
+            document.querySelectorAll('.option-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    // 同类型只能选一个
+                    const type = this.getAttribute('data-type');
+                    document.querySelectorAll(`.option-item[data-type="${type}"]`).forEach(i => {
+                        i.classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                    // 保存选择
+                    selectedDecision[type] = this.getAttribute('data-value');
+                });
+            });
+
+            // 提交AI决策
+            document.getElementById('submitDecision').addEventListener('click', function() {
+                generateRecommendation();
+            });
+
+            // 筛选标签点击
+            document.querySelectorAll('.tag').forEach(tag => {
+                tag.addEventListener('click', function() {
+                    const key = this.getAttribute('data-key');
+                    const value = this.getAttribute('data-value');
+                    
+                    // 切换选中状态
+                    if (this.classList.contains('active')) {
+                        this.classList.remove('active');
+                        delete selectedFilters[key];
+                    } else {
+                        // 同类型只能选一个
+                        document.querySelectorAll(`.tag[data-key="${key}"]`).forEach(t => {
+                            t.classList.remove('active');
+                        });
+                        this.classList.add('active');
+                        selectedFilters[key] = value;
+                    }
+                    
+                    // 应用筛选
+                    filterRestaurants();
+                });
+            });
+        }
+
+        // ===================== 数据采集 =====================
+        // 采集范围内美食数据
+        function collectFoodData() {
+            placeSearch.searchNearBy('', CENTER_POSITION, SEARCH_RADIUS, function(status, result) {
+                if (status === 'complete' && result.info === 'OK') {
+                    // 处理采集到的POI数据
+                    allRestaurants = result.poiList.pois.map(poi => {
+                        // 给每个商家自动打标签（核心解决信息分散问题）
+                        const tags = [];
+                        // 价格标签
+                        if (poi.biz_ext && poi.biz_ext.price) {
+                            const price = parseInt(poi.biz_ext.price.replace('¥', ''));
+                            if (price < 20) tags.push('性价比高');
+                        }
+                        // 类型标签
+                        if (poi.type.includes('快餐') || poi.type.includes('小吃')) {
+                            tags.push('早八速食');
+                            tags.push('食堂替代');
+                        }
+                        if (poi.type.includes('火锅') || poi.type.includes('烧烤')) {
+                            tags.push('聚餐');
+                        }
+                        if (poi.type.includes('轻食') || poi.type.includes('沙拉')) {
+                            tags.push('健康轻食');
+                        }
+                        // 小众/大众标签
+                        if (poi.type.includes('特色') || poi.type.includes('私房')) {
+                            tags.push('小而美');
+                        } else {
+                            tags.push('大众款');
+                        }
+                        // 口味标签（从名称/类型中提取）
+                        if (poi.name.includes('辣') || poi.type.includes('川') || poi.type.includes('湘')) {
+                            tags.push('辣');
+                        } else if (poi.type.includes('粤') || poi.type.includes('清')) {
+                            tags.push('清淡');
+                            tags.push('不辣');
+                        } else if (poi.type.includes('甜')) {
+                            tags.push('酸甜');
+                        } else {
+                            tags.push('咸鲜');
+                            tags.push('不辣');
+                        }
+                        // 用餐方式
+                        tags.push('到店吃');
+                        if (poi.biz_ext && poi.biz_ext.has_takeaway) {
+                            tags.push('可外卖');
+                        }
+
+                        return {
+                            id: poi.id,
+                            name: poi.name,
+                            position: [poi.location.lng, poi.location.lat],
+                            address: poi.address,
+                            price: poi.biz_ext ? poi.biz_ext.price : '¥20',
+                            rating: poi.score || '暂无评分',
+                            type: poi.type,
+                            phone: poi.tel || '',
+                            tags: tags,
+                            distance: poi.distance ? (poi.distance / 1000).toFixed(2) + 'km' : '未知',
+                            // 第三方平台链接（模拟，实际可对接美团/大众点评）
+                            jumpUrl: 'https://amap.com/place/' + poi.id
+                        };
+                    });
+
+                    // 在地图上添加标记
+                    addMarkersToMap();
+                    // 渲染餐厅列表
+                    renderRestaurantList(allRestaurants);
+                } else {
+                    console.error('数据采集失败:', result);
+                    alert('美食数据采集失败，请刷新重试');
+                }
+            });
+        }
+
+        // 在地图上添加商家标记
+        function addMarkersToMap() {
+            allRestaurants.forEach(restaurant => {
+                const marker = new AMap.Marker({
+                    position: restaurant.position,
+                    map: map,
+                    title: restaurant.name,
+                    icon: new AMap.Icon({
+                        size: new AMap.Size(30, 30),
+                        image: 'data:image/svg+xml;base64,' + btoa(`
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#EEAE2A">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                            </svg>
+                        `),
+                        imageSize: new AMap.Size(30, 30)
+                    })
+                });
+
+                // 点击标记显示信息窗口
+                marker.on('click', function() {
+                    const infoWindow = new AMap.InfoWindow({
+                        content: `
+                            <div style="padding:10px;">
+                                <h3 style="margin-bottom:5px;font-size:16px;">${restaurant.name}</h3>
+                                <p style="font-size:13px;margin-bottom:3px;">${restaurant.address}</p>
+                                <p style="font-size:13px;margin-bottom:3px;">价格：${restaurant.price}</p>
+                                <p style="font-size:13px;">评分：${restaurant.rating}</p>
+                            </div>
+                        `,
+                        position: restaurant.position
+                    });
+                    infoWindow.open(map);
+                    
+                    // 高亮列表项
+                    document.querySelectorAll('.restaurant-item').forEach(item => {
+                        item.classList.remove('active');
+                        if (item.getAttribute('data-id') === restaurant.id) {
+                            item.classList.add('active');
+                        }
+                    });
+                });
+            });
+        }
+
+        // ===================== 数据展示与筛选 =====================
+        // 渲染餐厅列表
+        function renderRestaurantList(restaurants) {
+            const listEl = document.getElementById('restaurantList');
+            listEl.innerHTML = '';
+
+            if (restaurants.length === 0) {
+                listEl.innerHTML = '<div style="text-align:center;padding:20px;">暂无符合条件的餐厅</div>';
+                return;
+            }
+
+            restaurants.forEach(restaurant => {
+                const item = document.createElement('div');
+                item.className = 'restaurant-item';
+                item.setAttribute('data-id', restaurant.id);
+                
+                // 构建标签HTML
+                let tagsHtml = '';
+                restaurant.tags.slice(0, 3).forEach(tag => { // 最多显示3个标签
+                    tagsHtml += `<div class="restaurant-tag">${tag}</div>`;
+                });
+
+                item.innerHTML = `
+                    <div class="restaurant-name">${restaurant.name}</div>
+                    <div class="restaurant-info">
+                        <span>💰 ${restaurant.price}</span>
+                        <span>⭐ ${restaurant.rating}</span>
+                        <span>📍 ${restaurant.distance}</span>
+                    </div>
+                    <div class="restaurant-tags">${tagsHtml}</div>
+                    <div class="action-btns">
+                        <button class="route-btn" data-id="${restaurant.id}">路线规划</button>
+                        <button class="jump-btn" onclick="window.open('${restaurant.jumpUrl}', '_blank')">去平台下单</button>
+                    </div>
+                `;
+
+                // 点击列表项定位到地图
+                item.addEventListener('click', function() {
+                    map.setCenter(restaurant.position);
+                    map.setZoom(17);
+                    // 高亮当前项
+                    document.querySelectorAll('.restaurant-item').forEach(i => {
+                        i.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                });
+
+                // 路线规划按钮
+                item.querySelector('.route-btn').addEventListener('click', function(e) {
+                    e.stopPropagation(); // 阻止冒泡
+                    showRoute(restaurant.position);
+                });
+
+                listEl.appendChild(item);
+            });
+        }
+
+        // 筛选餐厅
+        function filterRestaurants() {
+            // 如果没有筛选条件，显示全部
+            if (Object.keys(selectedFilters).length === 0) {
+                renderRestaurantList(allRestaurants);
+                return;
+            }
+
+            // 应用筛选条件
+            const filtered = allRestaurants.filter(restaurant => {
+                // 检查所有选中的筛选条件
+                for (const [key, value] of Object.entries(selectedFilters)) {
+                    // 标签包含筛选值才通过
+                    if (!restaurant.tags.includes(value)) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            renderRestaurantList(filtered);
+        }
+
+        // ===================== AI决策推荐 =====================
+        // 生成AI推荐（核心解决决策困难问题）
+        function generateRecommendation() {
+            // 检查是否选完所有条件
+            const requiredTypes = ['taste', 'scene', 'way', 'feature'];
+            const isComplete = requiredTypes.every(type => selectedDecision[type]);
+            
+            if (!isComplete) {
+                alert('请完成所有选项的选择！');
+                return;
+            }
+
+            // 根据选择的条件筛选餐厅
+            let recommended = allRestaurants.filter(restaurant => {
+                // 匹配所有选中的条件
+                return requiredTypes.every(type => {
+                    return restaurant.tags.includes(selectedDecision[type]);
+                });
+            });
+
+            // 如果匹配结果太少，放宽条件（只匹配前3个）
+            if (recommended.length < 3) {
+                recommended = allRestaurants.filter(restaurant => {
+                    let matchCount = 0;
+                    requiredTypes.forEach(type => {
+                        if (restaurant.tags.includes(selectedDecision[type])) {
+                            matchCount++;
+                        }
+                    });
+                    return matchCount >= 3;
+                });
+            }
+
+            // 最多推荐3个
+            recommended = recommended.slice(0, 3);
+
+            // 渲染推荐结果
+            const resultList = document.getElementById('resultList');
+            resultList.innerHTML = '';
+
+            recommended.forEach(restaurant => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item';
+                resultItem.innerHTML = `
+                    <div style="font-weight:600;margin-bottom:8px;">${restaurant.name}</div>
+                    <div style="font-size:14px;margin-bottom:8px;">📍 ${restaurant.address}</div>
+                    <div style="font-size:14px;margin-bottom:8px;">💰 ${restaurant.price} | ⭐ ${restaurant.rating}</div>
+                    <div style="font-size:13px;color:#DCA01E;">
+                        ✅ 匹配你的需求：${Object.values(selectedDecision).join('、')}
+                    </div>
+                `;
+                resultList.appendChild(resultItem);
+            });
+
+            // 显示结果
+            document.getElementById('resultWrap').style.display = 'block';
+        }
+
+        // ===================== 路线规划 =====================
+        // 显示路线规划
+        function showRoute(destPosition) {
+            // 清除之前的路线
+            walkingRoute.clear();
+            ridingRoute.clear();
+            transferRoute.clear();
+
+            // 起点默认为大运大学城中心
+            const startPosition = CENTER_POSITION;
+
+            // 弹窗选择路线类型
+            const routeType = prompt('请选择路线类型：\n1. 步行\n2. 骑行\n3. 公交', '1');
+            
+            switch(routeType) {
+                case '1':
+                    // 步行路线
+                    walkingRoute.search(startPosition, destPosition, function(status, result) {
+                        if (status === 'complete') {
+                            alert(`步行路线规划完成，预计${Math.round(result.routes[0].time/60)}分钟`);
+                        } else {
+                            alert('步行路线规划失败');
+                        }
+                    });
+                    break;
+                case '2':
+                    // 骑行路线
+                    ridingRoute.search(startPosition, destPosition, function(status, result) {
+                        if (status === 'complete') {
+                            alert(`骑行路线规划完成，预计${Math.round(result.routes[0].time/60)}分钟`);
+                        } else {
+                            alert('骑行路线规划失败');
+                        }
+                    });
+                    break;
+                case '3':
+                    // 公交路线
+                    transferRoute.search(startPosition, destPosition, function(status, result) {
+                        if (status === 'complete') {
+                            alert(`公交路线规划完成，共${result.routes[0].transits.length}条路线`);
+                        } else {
+                            alert('公交路线规划失败');
+                        }
+                    });
+                    break;
+                default:
+                    alert('无效的选择');
+            }
+        }
+    </script>
+</body>
+</html>
